@@ -14,13 +14,12 @@ pub fn about_dialog(scaled_icon: &gdk_pixbuf::Pixbuf) -> AboutDialog {
     about_dialog.set_authors(&[
         "Mouhamadou Fadilou Diop",
         "Serigne Abdou Khadre Wade",
-        "Ousmane Diallo",
+        "Daibou Ba",
         "Ibrahima Diallo",
-        "Mamadou Balde",
-        "Ndiaga Ba",
+        
     ]);
     about_dialog.set_website_label(Some("Code Repository"));
-    about_dialog.set_website(Some("https://learn.zone01dakar.sn/git/mouhamadoufadiop/rt"));
+    about_dialog.set_website(Some("https://learn.zone01dakar.sn/git/mouhamadoufadiop/rtt"));
     about_dialog.set_logo(Some(scaled_icon));
     about_dialog.set_modal(true);
     about_dialog.set_destroy_with_parent(true);
