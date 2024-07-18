@@ -79,7 +79,7 @@ The image header consists of three lines:
 
 All the other lines below, are the rgb values for each pixel, for example the first line of the image body represents a black pixel (rgb(0,0,0) -> black). Each line represents one pixel, starting on the top left corner transitioning to the right and, in this case, the fifth line is the pixel in the first row on the second column.
 
-So with this in mind, you will have to make an algorithm that fills a file by printing each line. You can use the cargo command this way: ``cargo run > output.ppm``. This will print the standard output to the file ``output.ppm``.
+So with this in mind, you will have to make an algorithm that fills a file by printing each line. You can use the cargo command this way: ``cargo run > output_img.ppm``. This will print the standard output to the file ``output_img.ppm``.
 
 In order to create the previously mentioned objects, you will need to search online for documentation about the geometrics of each.
 # Bonus
