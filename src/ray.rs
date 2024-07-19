@@ -1,41 +1,48 @@
-use glam::DVec3;
+use crate::Vec3;
 
-use crate::{hittable::Hittable, material::Scattered};
+#[cfg(test)]
+use assert_approx_eq::assert_approx_eq;
 
+#[derive(Default, Debug, Clone, Copy)]
 pub struct Ray {
-    pub origin: DVec3,
-    pub direction: DVec3,
+    pub origin: Vec3,
+    pub direction: Vec3,
 }
 
 impl Ray {
-    pub fn at(&self, t: f64) -> DVec3 {
-        self.origin + t * self.direction
+    pub fn new(origin: Vec3, direction: Vec3) -> Ray {
+        Ray { origin, direction }
     }
-    pub fn color<T>(&self, depth: i32, world: &T) -> DVec3
-    where
-        T: Hittable + std::marker::Sync,
-    {
-        if depth <= 0 {
-            return DVec3::new(0., 0., 0.);
-        }
-        if let Some(rec) =
-            world.hit(&self, (0.001)..f64::INFINITY)
-        {
-            if let Some(Scattered {
-                attenuation,
-                scattered,
-            }) = rec.material.scatter(self, rec.clone())
-            {
-                return attenuation
-                    * scattered.color(depth - 1, world);
-            }
-            return DVec3::new(0., 0., 0.);
-        }
 
-        let unit_direction: DVec3 =
-            self.direction.normalize();
-        let a = 0.5 * (unit_direction.y + 1.0);
-        return (1.0 - a) * DVec3::new(1.0, 1.0, 1.0)
-            + a * DVec3::new(0.5, 0.7, 1.0);
+    pub fn at(self, t: f64) -> Vec3 {
+        self.origin + self.direction * t
     }
+}
+
+#[test]
+fn test_ray() {
+    let p = Vec3::new(1.1, 1.2, 1.3);
+    let q = Vec3::new(2.2, 2.3, 2.4);
+
+    let r = Ray::new(p, q);
+
+    assert_approx_eq!(r.origin.x(), 1.1);
+    assert_approx_eq!(r.origin.y(), 1.2);
+    assert_approx_eq!(r.origin.z(), 1.3);
+    assert_approx_eq!(r.direction.x(), 2.2);
+    assert_approx_eq!(r.direction.y(), 2.3);
+    assert_approx_eq!(r.direction.z(), 2.4);
+}
+
+#[test]
+fn test_ray_at() {
+    let p1 = Vec3::new(0.0, 0.0, 0.0);
+    let p2 = Vec3::new(1.0, 2.0, 3.0);
+
+    let ray = Ray::new(p1, p2);
+    let s = ray.at(0.5);
+
+    assert_approx_eq!(s.x(), 0.5);
+    assert_approx_eq!(s.y(), 1.0);
+    assert_approx_eq!(s.z(), 1.5);
 }

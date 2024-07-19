@@ -1,128 +1,108 @@
-use crate::{hittable::HitRecord, ray::Ray};
-use glam::DVec3;
+use crate::color::Color;
+use crate::hit::HitRecord;
+use crate::ray::Ray;
+use crate::vec3::Vec3;
+use rand::prelude::*;
+use serde::{Deserialize, Serialize};
 
-use rand::Rng;
-use reflections::*;
-mod reflections;
-mod vectors;
-use vectors::*;
-
-#[non_exhaustive]
-#[derive(Debug, Clone, Copy)]
+#[derive(Copy, Clone, Debug, Deserialize, Serialize)]
 pub enum Material {
-    Lambertian { albedo: DVec3 },
-    Metal { albedo: DVec3, fuzz: f64 },
-    Dielectric { index_of_refraction: f64 },
+    Lambertian { albedo: Color },
+    Metal { albedo: Color },
+    Dielectric { ref_idx: f64 },
 }
-pub struct Scattered {
-    pub attenuation: DVec3,
-    pub scattered: Ray,
+
+impl Default for Material {
+    fn default() -> Self {
+        Material::Lambertian {
+            albedo: Color::default(),
+        }
+    }
 }
-impl Material {
-    pub fn scatter(
-        &self,
-        r_in: &Ray,
-        hit_record: HitRecord,
-    ) -> Option<Scattered> {
-        match self {
-            Material::Lambertian { albedo } => {
-                let mut scatter_direction = hit_record
-                    .normal
-                    + random_unit_vector();
 
-                // Catch degenerate scatter direction
-                if scatter_direction.abs_diff_eq(
-                    DVec3::new(0., 0., 0.),
-                    1e-8,
-                ) {
-                    scatter_direction = hit_record.normal;
-                }
+pub fn scatter(material: &Material, ray_in: &Ray, rec: &HitRecord) -> Option<(Color, Ray)> {
+    match material {
+        Material::Lambertian { albedo } => {
+            let target = rec.point + rec.normal + random_in_unit_sphere();
 
-                let scattered = Ray {
-                    origin: hit_record.point,
-                    direction: scatter_direction,
-                };
+            Some((*albedo, Ray::new(rec.point, target - rec.point)))
+        }
+        Material::Metal { albedo } => {
+            let reflected = reflect(&Vec3::unit_vector(&ray_in.direction), &rec.normal);
 
-                Some(Scattered {
-                    attenuation: *albedo,
-                    scattered,
-                })
+            if Vec3::dot(&Ray::default().direction, &rec.normal) > 0.0 {
+                Some((*albedo, Ray::new(rec.point, reflected)))
+            } else {
+                None
             }
-            Material::Metal { albedo, fuzz } => {
-                let reflected: DVec3 = reflect(
-                    r_in.direction.normalize(),
-                    hit_record.normal,
-                );
-                let scattered = Ray {
-                    origin: hit_record.point,
-                    direction: reflected
-                        + *fuzz * random_unit_vector(),
+        }
+        Material::Dielectric { ref_idx } => {
+            let outward_normal: Vec3;
+            let reflected = reflect(&ray_in.direction, &rec.normal);
+            let ni_over_nt: f64;
+
+            let cosine: f64 = if Vec3::dot(&ray_in.direction, &rec.normal) > 0.0 {
+                outward_normal = -rec.normal;
+                ni_over_nt = *ref_idx;
+
+                ref_idx * Vec3::dot(&ray_in.direction, &rec.normal) / ray_in.direction.length()
+            } else {
+                outward_normal = rec.normal;
+                ni_over_nt = 1.0 / ref_idx;
+
+                -Vec3::dot(&ray_in.direction, &rec.normal) / ray_in.direction.length()
+            };
+
+            let refracted: (Vec3, f64) =
+                match refract(&ray_in.direction, &outward_normal, ni_over_nt) {
+                    Some(v) => (v, schlick(cosine, *ref_idx)),
+                    None => (Vec3::default(), 1.0),
                 };
-                // absorb any scatter that is below the surface
-                if scattered
-                    .direction
-                    .dot(hit_record.normal)
-                    > 0.
-                {
-                    Some(Scattered {
-                        attenuation: *albedo,
-                        scattered,
-                    })
+
+            let mut rng = rand::thread_rng();
+
+            Some((
+                Color::new(1.0, 1.0, 1.0),
+                if rng.gen::<f64>() < refracted.1 {
+                    Ray::new(rec.point, reflected)
                 } else {
-                    None
-                }
-            }
-            Material::Dielectric {
-                index_of_refraction,
-            } => {
-                let mut rng = rand::thread_rng();
+                    Ray::new(rec.point, refracted.0)
+                },
+            ))
+        }
+    }
+}
 
-                let attenuation = DVec3::splat(1.0);
-                let refraction_ratio: f64 =
-                    if hit_record.front_face {
-                        index_of_refraction.recip()
-                    } else {
-                        *index_of_refraction
-                    };
+pub fn reflect(v: &Vec3, n: &Vec3) -> Vec3 {
+    *v - 2.0 * Vec3::dot(v, n) * *n
+}
 
-                let unit_direction =
-                    r_in.direction.normalize();
+pub fn refract(v: &Vec3, n: &Vec3, ni_over_nt: f64) -> Option<Vec3> {
+    let uv = Vec3::unit_vector(v);
+    let dt = Vec3::dot(&uv, n);
+    let discriminant = 1.0 - ni_over_nt * ni_over_nt * (1.0 - dt * dt);
 
-                let cos_theta = (-unit_direction
-                    .dot(hit_record.normal))
-                .min(1.0);
-                let sin_theta =
-                    (1.0 - cos_theta * cos_theta).sqrt();
+    if discriminant > 0.0 {
+        Some(ni_over_nt * (uv - *n * dt) - *n * discriminant.sqrt())
+    } else {
+        None
+    }
+}
 
-                let cannot_refract =
-                    refraction_ratio * sin_theta > 1.0;
+fn schlick(cosine: f64, ref_idx: f64) -> f64 {
+    let r0 = ((1.0 - ref_idx) / (1.0 + ref_idx)).powi(2);
 
-                let direction = if cannot_refract
-                    || reflectance(
-                        cos_theta,
-                        refraction_ratio,
-                    ) > rng.gen::<f64>()
-                {
-                    reflect(
-                        unit_direction,
-                        hit_record.normal,
-                    )
-                } else {
-                    refract(
-                        unit_direction,
-                        hit_record.normal,
-                        refraction_ratio,
-                    )
-                };
+    r0 + (1.0 - r0) * (1.0 - cosine).powi(5)
+}
 
-                Some(Scattered {
-                    attenuation,
-                    scattered: Ray {
-                        origin: hit_record.point,
-                        direction: direction,
-                    },
-                })
-            }
+fn random_in_unit_sphere() -> Vec3 {
+    let mut rng = rand::thread_rng();
+
+    loop {
+        let p = 2.0 * Vec3::new(rng.gen::<f64>(), rng.gen::<f64>(), 0.0) - Vec3::new(1.0, 1.0, 0.0);
+
+        if p.squared_length() < 1.0 {
+            return p;
         }
     }
 }
