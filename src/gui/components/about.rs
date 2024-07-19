@@ -9,17 +9,17 @@ pub fn about_dialog(scaled_icon: &gdk_pixbuf::Pixbuf) -> AboutDialog {
     about_dialog.set_program_name("Grit:Lab Ray Tracing Project");
     about_dialog.set_comments(Some(
         "Completed during grit:lab full-stack development course as part of the Rust Studies. \n
-        December 2023",
+        July 2024",
     ));
     about_dialog.set_authors(&[
-        "Viktor Boman",
-        "Johannes Eckerman",
-        "Salam Foon",
-        "Ville Patjas",
-        "André Teetor",
+        "Mouhamadou Fadilou Diop",
+        "Daibou Ba",
+        "Ndiagua ",
+        "Ibdrahima Diallo",
+       
     ]);
     about_dialog.set_website_label(Some("Code Repository"));
-    about_dialog.set_website(Some("https://github.com/bomanviktor/rt"));
+    about_dialog.set_website(Some("https://learn.zone01dakar.sn/git/mouhamadoufadiop/rt"));
     about_dialog.set_logo(Some(scaled_icon));
     about_dialog.set_modal(true);
     about_dialog.set_destroy_with_parent(true);
