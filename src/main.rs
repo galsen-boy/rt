@@ -4,7 +4,7 @@ use rt::type_aliases::Point;
 use std::env;
 use std::sync::Arc;
 use std::time::Instant;
-const OUTPUT_PATH: &str = "output.ppm";
+const OUTPUT_PATH: &str = "output_img.ppm";
 
 fn main() {
     let args: Vec<String> = env::args().collect();

@@ -169,7 +169,7 @@ pub fn launch_gui() {
         image_window.set_title("Rendered Image");
         image_window.set_default_size(400, 400); // Set to your desired size
 
-        let image = Image::from_file("output.ppm"); // Load the image
+        let image = Image::from_file("output_img.ppm"); // Load the image
         image_window.add(&image);
 
         image_window.show_all();
@@ -241,7 +241,7 @@ pub fn launch_gui() {
 
             // Schedule rendering to start after a short delay
             glib::timeout_add_local(50, clone!(@strong app_state => move || {
-                const OUTPUT_PATH: &str = "output.ppm";
+                const OUTPUT_PATH: &str = "output_img.ppm";
                 let updated_scene = Arc::new(update_scene_from_gui(app_state.clone()));
 
                 let mut camera = CameraBuilder::new()
