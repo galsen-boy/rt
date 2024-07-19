@@ -1,6 +1,6 @@
 use glam::DVec3;
 use rt::hittable::Hittable;
-use rt::{camera::Camera, material::Material, shapes::cylinder::Cylinder, shapes::sphere::Sphere};
+use rt::{camera::Camera, material::Material, shapes::sphere::Sphere};
 use std::cell::RefCell;
 use std::io;
 use std::rc::Rc;
@@ -14,6 +14,26 @@ use glib::clone;
 struct AppState {
     object_configs: Vec<ObjectConfig>,
 }
+impl AppState {
+    // Method to add a new ObjectConfig
+    pub fn add_object_config(&mut self, config: ObjectConfig) {
+        self.object_configs.push(config);
+    }
+
+    // Method to remove an ObjectConfig
+    pub fn remove_object_config(&mut self, index: usize) {
+        if index < self.object_configs.len() {
+            self.object_configs.remove(index);
+        }
+    }
+
+    // Method to modify an existing ObjectConfig
+    pub fn update_object_config(&mut self, index: usize, new_config: ObjectConfig) {
+        if index < self.object_configs.len() {
+            self.object_configs[index] = new_config;
+        }
+    }
+}
 
 struct ObjectConfig {
     pos_x_entry: Rc<RefCell<Entry>>,
@@ -22,9 +42,6 @@ struct ObjectConfig {
     radius_entry: Rc<RefCell<Entry>>,
     material_selector: Rc<RefCell<ComboBoxText>>,
 }
-
-
-
 
 struct GuiData {
     object_type: String,
@@ -126,20 +143,8 @@ fn launch_gui() {
     let app_state = Rc::new(RefCell::new(AppState {
         object_configs: Vec::new(),
     }));
-
+    
     gtk::init().expect("Failed to initialize GTK.");
-
-    let object_selector = Rc::new(RefCell::new(ComboBoxText::new()));
-    let pos_x_entry = Rc::new(RefCell::new(Entry::new()));
-    let pos_y_entry = Rc::new(RefCell::new(Entry::new()));
-    let pos_z_entry = Rc::new(RefCell::new(Entry::new())); // Added Z position entry
-    let radius_entry = Rc::new(RefCell::new(Entry::new()));
-    let material_selector = Rc::new(RefCell::new(ComboBoxText::new()));
-
-    pos_x_entry.borrow().connect_changed(|entry| {
-        let text = entry.get_text().to_string();
-        println!("X Entry changed (fn launch_gui): {}", text);
-    });
 
     let window = Window::new(WindowType::Toplevel);
     window.set_title("Ray Tracing Settings");
@@ -154,24 +159,6 @@ fn launch_gui() {
     let add_object_button = Button::with_label("Add Object");
     vbox.pack_start(&add_object_button, false, false, 0);
 
-    let object_selector_clone = object_selector.clone();
-    let pos_x_entry_clone = pos_x_entry.clone();
-    let pos_y_entry_clone = pos_y_entry.clone();
-    let pos_z_entry_clone = pos_z_entry.clone();
-
-    //log the value of the position entry when it changes
-    pos_x_entry_clone.borrow().connect_changed(|entry| {
-        let text = entry.get_text().to_string();
-        println!("X Entry changed (line 141) : {}", text);
-    });
-    pos_y_entry_clone.borrow().connect_changed(|entry| {
-        let text = entry.get_text().to_string();
-        println!("Y Entry changed (line 145) : {}", text);
-    });
-    pos_z_entry_clone.borrow().connect_changed(|entry| {
-        let text = entry.get_text().to_string();
-        println!("Z Entry changed (line 149) : {}", text);
-    });
 
     let pos_x_entry = Rc::new(RefCell::new(Entry::new()));
 
@@ -182,7 +169,7 @@ fn launch_gui() {
         let (object_config, pos_x_entry, pos_y_entry, pos_z_entry, radius_entry, material_selector) = create_object_config();
         vbox_clone.pack_start(&object_config, false, false, 10);
 
-    app_state.borrow_mut().object_configs.push(ObjectConfig {
+    app_state.borrow_mut().add_object_config(ObjectConfig {
         pos_x_entry: pos_x_entry.clone(),
         pos_y_entry: pos_y_entry.clone(),
         pos_z_entry: pos_z_entry.clone(),
@@ -258,7 +245,9 @@ fn launch_gui() {
 
     //Button to render the scene with the given parameters from the GUI on click
     render_button.connect_clicked(clone!(@strong app_state => move |_| {
-        
+        let mut gui_datas: Vec<GuiData> = Vec::new();
+
+
         // Iterate over all stored object configurations
         for object_config in &app_state.borrow().object_configs {
             // Read values from each object configuration
@@ -300,21 +289,43 @@ fn launch_gui() {
             image_width: width_entry.get_text().parse().unwrap_or(400),
             aspect_ratio: 16.0 / 9.0, // Adjust as needed
         };
+        gui_datas.push(gui_data);
 
-        let world: Vec<Box<dyn Hittable>> = create_world_from_gui_data(&gui_data);
-        let camera: Camera = create_camera_from_gui_data(&gui_data);
+        let mut _world: Vec<Box<dyn Hittable>> = Vec::new();
 
-        // Trigger the rendering logic:
-        camera.render_to_disk(world).unwrap();
 
-        // Log the rendering information
-        println!("Rendering with the following parameters:");
-        println!("Object Type: {:?}", gui_data.object_type);
-        println!("Object Position: {:?}", gui_data.object_position);
-        println!("Object Radius: {:?}", gui_data.object_radius);
-        println!("Object Material: {:?}", gui_data.object_material);
-        println!("Image Width: {:?}", gui_data.image_width);
-        //println!("Raw X position2: {:?}", pos_x_entry.borrow().get_text());
+    // Define a default GuiData
+    let default_gui_data = GuiData {
+    object_type: "Sphere".to_string(), // Replace with actual default values
+    object_position: (0.0, 0.0, 0.0),
+    object_radius: 1.0,
+    object_material: Material::Lambertian { 
+        albedo: DVec3::new(0.5, 0.5, 0.5) 
+    },
+    camera_position: (13.0, 2.0, 3.0),
+    camera_look_at: (0.0, 0.0, 0.0),
+    image_width: 400,
+    aspect_ratio: 16.0 / 9.0,
+    };
+    
+    // Create the world with all objects from gui_datas
+    let world: Vec<Box<dyn Hittable>> = create_world_from_gui_data(&gui_datas);
+    let camera: Camera = create_camera_from_gui_data(gui_datas.first().unwrap_or_else(|| &default_gui_data));
+
+    // Trigger the rendering logic:
+    camera.render_to_disk(world).unwrap();
+
+    //clone the gui_data to be able to use it in console output
+    
+
+        // // Log the rendering information
+        // println!("Rendering with the following parameters:");
+        // println!("Object Type: {:?}", gui_data.object_type);
+        // println!("Object Position: {:?}", gui_data.object_position);
+        // println!("Object Radius: {:?}", gui_data.object_radius);
+        // println!("Object Material: {:?}", gui_data.object_material);
+        // println!("Image Width: {:?}", gui_data.image_width);
+        // //println!("Raw X position2: {:?}", pos_x_entry.borrow().get_text());
     }
     }));
 
@@ -328,24 +339,27 @@ fn launch_gui() {
     gtk::main();
 }
 
-fn create_world_from_gui_data(gui_data: &GuiData) -> Vec<Box<dyn Hittable>> {
+fn create_world_from_gui_data(gui_datas: &Vec<GuiData>) -> Vec<Box<dyn Hittable>> {
     let mut world: Vec<Box<dyn Hittable>> = vec![];
 
-    // For now, adding one object based on GUI data
-    world.push(Box::new(Sphere {
-        center: DVec3::new(
-            gui_data.object_position.0,
-            gui_data.object_position.1,
-            gui_data.object_position.2,
-        ),
-        radius: gui_data.object_radius,
-        material: gui_data.object_material.clone(),
-    }));
+    for gui_data in gui_datas {
+        // Add each object based on its GUI data
+        world.push(Box::new(Sphere {
+            center: DVec3::new(
+                gui_data.object_position.0,
+                gui_data.object_position.1,
+                gui_data.object_position.2,
+            ),
+            radius: gui_data.object_radius,
+            material: gui_data.object_material.clone(),
+        }));
 
-    // TODO: Add more objects based on GUI data
+        // TODO: Extend this to handle different types of objects if needed
+    }
 
     world
 }
+
 fn create_camera_from_gui_data(gui_data: &GuiData) -> Camera {
     Camera::init()
         .image_width(gui_data.image_width)
