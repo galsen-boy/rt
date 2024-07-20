@@ -1274,6 +1274,86 @@ Ce code met en œuvre des matériaux avec des propriétés de diffusion, de réf
 
 ## Plane_surf
 # plane_surf.rs
+Ce code définit une structure ``Plane`` représentant un plan infini dans une scène 3D et implémente l'interface Hittable pour déterminer les intersections avec des rayons. Voici une explication détaillée de chaque partie :
+## Importations
+```
+use crate::hit::*;
+use crate::material::Material;
+use crate::ray::Ray;
+use crate::vec3::Vec3;
+```
+Ces importations permettent d'utiliser les structures et fonctions définies dans d'autres modules du projet, comme ``hit``, ``material``, ``ray``, et ``vec3``.
+## Structure Plane
+```
+#[derive(Debug)]
+pub struct Plane {
+    normal: Vec3,
+    dist: f64,
+    width: f64,
+    height: f64,
+    material: Material,
+}
+```
+- ``normal`` : Le vecteur normal du plan.
+- ``dist`` : La distance du plan par rapport à l'origine le long de la normale.
+- width et height : Les dimensions du plan. Dans ce cas, ils sont utilisés pour limiter l'étendue du plan, bien que cela ne soit pas typique pour un plan infini.
+- material : Le matériau du plan.
+
+## Méthode ``new``
+```
+impl Plane {
+    pub fn new(normal: Vec3, dist: f64, width: f64, height: f64, material: Material) -> Plane {
+        Plane {
+            normal: normal * -1.0,
+            dist,
+            width,
+            height,
+            material,
+        }
+    }
+}
+```
+- ``new ``: Constructeur pour créer une nouvelle instance de Plane. Notez que la normale est inversée (normal ``* -1.0``), ce qui pourrait être intentionnel selon la définition de l'orientation du plan.
+
+## Implémentation de ``Hittable``
+```
+impl Hittable for Plane {
+    fn hit(&self, r: &Ray, t_min: f64, t_max: f64) -> Option<HitRecord> {
+        let denom = Vec3::dot(&self.normal, &r.direction);
+        if denom > 1e-6 {
+            let t = (-self.dist - Vec3::dot(&self.normal, &r.origin)) / denom;
+
+            if t > t_min && t < t_max {
+                let point = r.at(t);
+                let d = point.x().abs().max(point.y().abs().max(point.z().abs()));
+
+                if d < self.width / 2.0 && d < self.height / 2.0 {
+                    return Some(HitRecord {
+                        t,
+                        point,
+                        normal: self.normal,
+                        u: 0.0,
+                        v: 0.0,
+                        material: self.material,
+                    });
+                }
+            }
+        }
+
+        None
+    }
+}
+```
+- ``hit`` : Méthode pour déterminer si un rayon (Ray) intersecte le plan.
+    - Calcul du dénominateur : denom est la projection du rayon sur la normale du plan.
+    - Vérification de la distance : Si le dénominateur est supérieur à un petit nombre (1e-6), on calcule la distance t le long du rayon où il intersecte le plan.
+    - Vérification des limites : Si t est dans l'intervalle [t_min, t_max], on calcule le point d'intersection et vérifie si ce point est à l'intérieur des limites définies par width et height.
+    - Retour du HitRecord : Si l'intersection est valide, on crée et retourne un HitRecord contenant les détails de l'intersection. Sinon, retourne None.
+
+## Conclusion
+
+Ce code permet de créer un plan et de détecter les intersections avec des rayons, en tenant compte des dimensions du plan. Le plan est défini par sa normale, sa distance par rapport à l'origine, sa largeur, sa hauteur et son matériau. L'implémentation de la méthode hit permet de calculer si et où un rayon intersecte le plan, en retournant un enregistrement d'intersection (HitRecord) le cas échéant.
+
 ## Ray
 # ray.rs
 ## Sphere
