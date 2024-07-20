@@ -1356,6 +1356,83 @@ Ce code permet de créer un plan et de détecter les intersections avec des rayo
 
 ## Ray
 # ray.rs
+Ce code définit une structure Ray pour représenter des rayons dans l'espace 3D, avec des méthodes pour créer des rayons et calculer des points le long de ceux-ci. Il inclut également des tests unitaires pour vérifier le bon fonctionnement des méthodes. Voici une explication détaillée de chaque partie :
+## Importations
+```
+use crate::Vec3;
+
+#[cfg(test)]
+use assert_approx_eq::assert_approx_eq;
+```
+Ces lignes importent la structure Vec3 du module actuel (``crate``) et la macro assert_approx_eq pour les tests unitaires. assert_approx_eq permet de comparer des nombres à virgule flottante avec une certaine tolérance.
+## Structure ``Ray``
+```
+#[derive(Default, Debug, Clone, Copy)]
+pub struct Ray {
+    pub origin: Vec3,
+    pub direction: Vec3,
+}
+```
+- ``origin`` : Le point de départ du rayon.
+- ``direction`` : La direction dans laquelle le rayon se propage.
+- Les attributs ``Default``, ``Debug``,``Clone``, et ``Copy`` sont dérivés automatiquement pour simplifier la création, l'affichage, la copie et le clonage des instances de Ray.
+
+## Implémentation de ``Ray``
+```
+impl Ray {
+    pub fn new(origin: Vec3, direction: Vec3) -> Ray {
+        Ray { origin, direction }
+    }
+
+    pub fn at(self, t: f64) -> Vec3 {
+        self.origin + self.direction * t
+    }
+}
+```
+- ``new``: Constructeur pour créer une nouvelle instance de Ray avec une origine et une direction données.
+- ``at ``: Méthode pour calculer un point le long du rayon à une distance t de l'origine. Le point est calculé en ajoutant la direction du rayon multipliée par ``t`` à l'origine.
+
+## Tests unitaires
+```
+#[test]
+fn test_ray() {
+    let p = Vec3::new(1.1, 1.2, 1.3);
+    let q = Vec3::new(2.2, 2.3, 2.4);
+
+    let r = Ray::new(p, q);
+
+    assert_approx_eq!(r.origin.x(), 1.1);
+    assert_approx_eq!(r.origin.y(), 1.2);
+    assert_approx_eq!(r.origin.z(), 1.3);
+    assert_approx_eq!(r.direction.x(), 2.2);
+    assert_approx_eq!(r.direction.y(), 2.3);
+    assert_approx_eq!(r.direction.z(), 2.4);
+}
+
+#[test]
+fn test_ray_at() {
+    let p1 = Vec3::new(0.0, 0.0, 0.0);
+    let p2 = Vec3::new(1.0, 2.0, 3.0);
+
+    let ray = Ray::new(p1, p2);
+    let s = ray.at(0.5);
+
+    assert_approx_eq!(s.x(), 0.5);
+    assert_approx_eq!(s.y(), 1.0);
+    assert_approx_eq!(s.z(), 1.5);
+}
+```
+- ``test_ray`` : Teste la méthode new pour vérifier que l'origine et la direction du rayon sont correctement initialisées.
+    - Crée un rayon ``r`` avec une origine ``p`` et une direction ``q``.
+    - Utilise ``assert_approx_eq!`` pour vérifier que les coordonnées de l'origine et de la direction du rayon ``r`` sont correctes.
+- ``test_ray_at`` : Teste la méthode at pour vérifier que le calcul des points le long du rayon est correct.
+    - Crée un rayon ray avec une origine p1 et une direction p2.
+        Calcule un point s le long du rayon à une distance 0.5 de l'origine.
+    - Utilise ``assert_approx_eq!`` pour vérifier que les coordonnées du point ``s`` sont correctes.
+
+## onclusion
+
+Ce code définit une structure Ray pour représenter des rayons en 3D, avec des méthodes pour initialiser des rayons et calculer des points le long de ceux-ci. Les tests unitaires permettent de vérifier la précision de ces méthodes, assurant ainsi que les rayons sont correctement manipulés dans les calculs de rendu ou de tracé de rayons.
 ## Sphere
 # sphere.rs
 ## Vec3
