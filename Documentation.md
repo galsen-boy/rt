@@ -1142,6 +1142,136 @@ Explications des principales parties :
 Ce code met en œuvre les bases d'un moteur de rendu par lancer de rayons, en calculant les couleurs des pixels d'une image en fonction des intersections de rayons avec des objets dans une scène 3D. Les différents modules fournissent les fonctionnalités nécessaires pour manipuler les rayons, les vecteurs, les couleurs, et les matériaux des objets.
 ## Material
 # material.rs
+Ce code Rust définit différents matériaux pour les objets d'une scène 3D et implémente la logique pour simuler la diffusion, la réflexion et la réfraction des rayons lorsqu'ils interagissent avec ces matériaux. Voici une explication détaillée des principales parties du code :
+## Déclaration des Importations
+```
+use crate::color::Color;
+use crate::hit::HitRecord;
+use crate::ray::Ray;
+use crate::vec3::Vec3;
+use rand::prelude::*;
+use serde::{Deserialize, Serialize};
+```
+- Importation de modules : Utilisation des modules définis dans le projet et des crates externes comme rand pour la génération aléatoire et serde pour la sérialisation/désérialisation.
+
+## Enum ``Material``
+```
+#[derive(Copy, Clone, Debug, Deserialize, Serialize)]
+pub enum Material {
+    Lambertian { albedo: Color },
+    Metal { albedo: Color },
+    Dielectric { ref_idx: f64 },
+}
+
+impl Default for Material {
+    fn default() -> Self {
+        Material::Lambertian {
+            albedo: Color::default(),
+        }
+    }
+}
+```
+- Enum ``Material`` : Représente différents types de matériaux avec des propriétés spécifiques :
+    - ``Lambertian`` : Matériau diffus, caractérisé par un albédo (couleur).
+    - ``Metal`` : Matériau métallique, également caractérisé par un albédo.
+    - ``Dielectric`` : Matériau diélectrique, caractérisé par un indice de réfraction.
+- Implémentation de Default : Définit le matériau par défaut comme étant Lambertian avec une couleur par défaut.
+
+## Fonction ``scatter``
+```
+pub fn scatter(material: &Material, ray_in: &Ray, rec: &HitRecord) -> Option<(Color, Ray)> {
+    match material {
+        Material::Lambertian { albedo } => {
+            let target = rec.point + rec.normal + random_in_unit_sphere();
+            Some((*albedo, Ray::new(rec.point, target - rec.point)))
+        }
+        Material::Metal { albedo } => {
+            let reflected = reflect(&Vec3::unit_vector(&ray_in.direction), &rec.normal);
+            if Vec3::dot(&Ray::default().direction, &rec.normal) > 0.0 {
+                Some((*albedo, Ray::new(rec.point, reflected)))
+            } else {
+                None
+            }
+        }
+        Material::Dielectric { ref_idx } => {
+            let outward_normal: Vec3;
+            let reflected = reflect(&ray_in.direction, &rec.normal);
+            let ni_over_nt: f64;
+
+            let cosine: f64 = if Vec3::dot(&ray_in.direction, &rec.normal) > 0.0 {
+                outward_normal = -rec.normal;
+                ni_over_nt = *ref_idx;
+                ref_idx * Vec3::dot(&ray_in.direction, &rec.normal) / ray_in.direction.length()
+            } else {
+                outward_normal = rec.normal;
+                ni_over_nt = 1.0 / ref_idx;
+                -Vec3::dot(&ray_in.direction, &rec.normal) / ray_in.direction.length()
+            };
+
+            let refracted: (Vec3, f64) = match refract(&ray_in.direction, &outward_normal, ni_over_nt) {
+                Some(v) => (v, schlick(cosine, *ref_idx)),
+                None => (Vec3::default(), 1.0),
+            };
+
+            let mut rng = rand::thread_rng();
+            Some((
+                Color::new(1.0, 1.0, 1.0),
+                if rng.gen::<f64>() < refracted.1 {
+                    Ray::new(rec.point, reflected)
+                } else {
+                    Ray::new(rec.point, refracted.0)
+                },
+            ))
+        }
+    }
+}
+```
+- ``scatter`` : Calcule la direction et la couleur d'un rayon réfléchi ou réfracté en fonction du matériau et des caractéristiques de l'intersection (HitRecord).
+    - ``Lambertian`` : Calcule une nouvelle direction aléatoire pour simuler la diffusion.
+    - ``Metal`` : Calcule la direction du rayon réfléchi.
+    - ``Dielectric`` : Calcule la réflexion et la réfraction en fonction de l'indice de réfraction et du modèle de Fresnel (équation de Schlick).
+
+## Fonctions Utilitaires
+```
+pub fn reflect(v: &Vec3, n: &Vec3) -> Vec3 {
+    *v - 2.0 * Vec3::dot(v, n) * *n
+}
+
+pub fn refract(v: &Vec3, n: &Vec3, ni_over_nt: f64) -> Option<Vec3> {
+    let uv = Vec3::unit_vector(v);
+    let dt = Vec3::dot(&uv, n);
+    let discriminant = 1.0 - ni_over_nt * ni_over_nt * (1.0 - dt * dt);
+    if discriminant > 0.0 {
+        Some(ni_over_nt * (uv - *n * dt) - *n * discriminant.sqrt())
+    } else {
+        None
+    }
+}
+
+fn schlick(cosine: f64, ref_idx: f64) -> f64 {
+    let r0 = ((1.0 - ref_idx) / (1.0 + ref_idx)).powi(2);
+    r0 + (1.0 - r0) * (1.0 - cosine).powi(5)
+}
+
+fn random_in_unit_sphere() -> Vec3 {
+    let mut rng = rand::thread_rng();
+    loop {
+        let p = 2.0 * Vec3::new(rng.gen::<f64>(), rng.gen::<f64>(), 0.0) - Vec3::new(1.0, 1.0, 0.0);
+        if p.squared_length() < 1.0 {
+            return p;
+        }
+    }
+}
+```
+- ``reflect`` : Calcule la réflexion d'un vecteur v par rapport à une normale n.
+- ``refract`` : Calcule la réfraction d'un vecteur v par rapport à une normale n en fonction de l'indice de réfraction.
+- ``schlick`` : Approximation de l'équation de Fresnel pour déterminer la proportion de réflexion par rapport à la réfraction.
+- ``random_in_unit_sphere`` : Génère un vecteur aléatoire à l'intérieur d'une sphère unitaire, utilisé pour simuler la diffusion Lambertian.
+
+## Conclusion
+
+Ce code met en œuvre des matériaux avec des propriétés de diffusion, de réflexion et de réfraction, permettant de simuler des effets réalistes de lumière dans une scène 3D par lancer de rayons. Les fonctions utilitaires supportent ces calculs en fournissant des opérations mathématiques sur les vecteurs.
+
 ## Plane_surf
 # plane_surf.rs
 ## Ray
