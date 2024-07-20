@@ -887,8 +887,259 @@ impl Flags {
 Ce code constitue la partie de votre programme qui gère l'entrée utilisateur via la ligne de commande pour spécifier un fichier de configuration. Il lit ce fichier, le parse avec ron et crée une instance d'Application basée sur les données de configuration. Les erreurs sont gérées de manière élégante pour fournir des informations utiles en cas de problème.
 ## Hit
 ## hit.rs
+Ce code définit une interface pour des objets pouvant être "touchés" par un rayon (ray tracing), ainsi qu'une liste de tels objets. Voici une explication détaillée des principales parties du code :
+Structure HitRecord
+```
+#[derive(Default, Clone, Copy)]
+pub struct HitRecord {
+    pub t: f64,
+    pub point: Vec3,
+    pub normal: Vec3,
+    pub u: f64,
+    pub v: f64,
+    pub material: Material,
+}
+```
+- ``HitRecord`` : Représente les informations d'un point d'impact lorsqu'un rayon touche un objet.
+    - ``t`` : Distance le long du rayon où l'impact a eu lieu.
+    - ``point`` : Position de l'impact.
+    - ``normal`` : Normale à la surface au point d'impact.
+    - ``u`` et ``v`` : Coordonnées de texture.
+    - ``material`` : Matériau de l'objet au point d'impact.
+
+## Trait ``Hittable``
+```
+pub trait Hittable: Debug {
+    fn hit(&self, ray: &Ray, t_min: f64, t_max: f64) -> Option<HitRecord>;
+}
+```
+- ``Hittable`` : Un trait pour les objets qui peuvent être touchés par un rayon.
+    - ``hit`` : Méthode pour déterminer si un rayon touche l'objet entre t_min et - ``t_max``. Retourne une ``Option<HitRecord>`` contenant les informations d'impact si le rayon touche l'objet.
+
+## Implémentation de ``HitRecord``
+```
+impl HitRecord {
+    pub fn set_face_normal(&mut self, r: &Ray, outward_normal: &Vec3) {
+        if Vec3::dot(&r.direction, outward_normal) > 0.0 {
+            self.normal = *outward_normal;
+        } else {
+            self.normal = *outward_normal * -1.0;
+        }
+    }
+}
+```
+- ``set_face_normal`` : Définit la normale de la face de l'objet touché en tenant compte de l'orientation du rayon par rapport à la normale extérieure.
+
+## Structure ``HittableList``
+```
+#[derive(Debug, Default)]
+pub struct HittableList(pub Vec<Box<dyn Hittable>>);
+```
+- ``HittableList`` : Une collection d'objets Hittable.
+    - ``Vec<Box<dyn Hittable>>`` : Utilise un vecteur de boîtes pour stocker des objets dynamiques qui implémentent le trait Hittable.
+
+## Implémentations de ``HittableList``
+```
+impl HittableList {
+    pub fn new(list: Vec<Box<dyn Hittable>>) -> HittableList {
+        HittableList(list)
+    }
+}
+```
+- ``new`` : Constructeur pour HittableList.
+```
+impl Hittable for HittableList {
+    fn hit(&self, ray: &Ray, t_min: f64, t_max: f64) -> Option<HitRecord> {
+        let mut hit_record = None;
+        let mut closest_so_far = t_max;
+
+        for object in &self.0 {
+            if let Some(rec) = object.hit(ray, t_min, closest_so_far) {
+                closest_so_far = rec.t;
+                hit_record = Some(rec);
+            }
+        }
+
+        hit_record
+    }
+}
+```
+- ``hit`` : Vérifie si le rayon touche un des objets dans la liste. Si oui, retourne le HitRecord le plus proche.
+
+## Tests
+```
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::color::Color;
+
+    #[test]
+    fn test_hitrecord() {
+        let hit_record = HitRecord {
+            t: 1.0,
+            point: Vec3(1.0, 2.0, 3.0),
+            normal: Vec3(0.0, 0.0, 1.0),
+            u: 1.0,
+            v: 1.0,
+            material: Material::Lambertian {
+                albedo: Color::default(),
+            },
+        };
+        assert_eq!(hit_record.point, Vec3(1.0, 2.0, 3.0));
+        assert_eq!(hit_record.t, 1.0);
+        assert_eq!(hit_record.normal, Vec3(0.0, 0.0, 1.0));
+    }
+}
+```
+- ``test_hitrecord`` : Test unitaire pour vérifier la structure HitRecord. Assure que les valeurs initialisées sont correctes.
+
+## Conclusion
+Ce code implémente la base nécessaire pour un moteur de rendu basé sur le ray tracing, avec des structures et des méthodes pour gérer les impacts des rayons sur des objets et une liste d'objets dans la scène.
 # Main
 # main.rs
+Ce code Rust met en œuvre un moteur de rendu par lancer de rayons (ray tracing). Voici une explication détaillée de ses principales parties :
+## Modules
+```
+pub mod camera;
+pub mod color;
+pub mod config;
+pub mod cube;
+pub mod flags;
+pub mod hit;
+pub mod material;
+pub mod plane_surf;
+mod cylinder;
+pub mod ray;
+pub mod sphere;
+pub mod vec3;
+```
+- Déclaration de modules qui contiennent différentes fonctionnalités nécessaires pour le ray tracing.
+
+## Importations
+```
+use clap::Parser;
+use color::Color;
+use hit::{Hittable, HittableList};
+use material::scatter;
+use rand::prelude::*;
+use ray::Ray;
+use vec3::Vec3;
+
+use crate::flags::Flags;
+```
+- Importation des modules nécessaires ainsi que des fonctions spécifiques de ces modules.
+
+## Fonction ``color``
+```
+fn color(r: &Ray, world: &HittableList, depth: i32) -> Color {
+    if let Some(rec) = world.hit(r, 0.0, std::f64::MAX) {
+        if depth < 50 && let Some((attenuation, scattered)) = scatter(&rec.material, r, &rec) {
+            attenuation * color(&scattered, world, depth + 1)
+        } else {
+            Color::new(0.0, 0.0, 0.0)
+        }
+    } else {
+        let unit_direction = Vec3::unit_vector(&r.direction);
+        let t = 0.5 * (unit_direction.y() + 1.0);
+
+        Color::new(1.0, 1.0, 1.0) * (1.0 - t) + Color::new(0.5, 0.7, 1.0) * t
+    }
+}
+```
+- ``color ``: Calcule la couleur d'un rayon en fonction des objets dans la scène.
+    - Si le rayon touche un objet, la couleur est déterminée par l'atténuation et le rayon réfléchi.
+    - Si le rayon ne touche pas d'objet, la couleur est interpolée entre le blanc et le bleu en fonction de la direction du rayon.
+
+## Constante ``MAX_RGB_VALUE``
+```
+const MAX_RGB_VALUE: u8 = 255; // Valeur maximale en RGB (0...255)
+```
+- Valeur maximale pour une composante de couleur RGB.
+
+## Fonction ``main``
+```
+fn main() {
+    let flags = Flags::parse();
+    if !flags.config.exists() || !flags.config.is_file() {
+        eprintln!("Please choose a valid file");
+        return;
+    }
+
+    let app = flags.get_application().expect("Failed to parse config");
+
+    let mut rng = rand::thread_rng();
+    let brightness = if app.light > 0 && app.light <= 100 {
+        app.light as f64 / 100.0
+    } else {
+        1.0
+    };
+
+    let debug_pad = app.height.to_string().len();
+
+    println!("P3\n{} {}\n{MAX_RGB_VALUE}", app.width, app.height);
+
+    for j in (0..app.height).rev() {
+        eprint!("\rScanlines remaining: {j: <debug_pad$}");
+
+        for i in 0..app.width {
+            let mut col: Color = (0..app.samples)
+                .map(|_| {
+                    let u = (i as f64 + rng.gen::<f64>()) / app.width as f64;
+                    let v = (j as f64 + rng.gen::<f64>()) / app.height as f64;
+                    let r = &app.camera.get_ray(u, v);
+
+                    color(r, &app.world, 1)
+                })
+                .sum();
+
+            col /= app.samples as f64;
+            col = brightness * col;
+
+            let adjust = |f: f64| (255.99 * f) as i32;
+
+            let ir = adjust(col.r());
+            let ig = adjust(col.g());
+            let ib = adjust(col.b());
+
+            println!("{ir} {ig} {ib}");
+        }
+    }
+
+    eprintln!("\nDone!");
+}
+```
+Explications des principales parties :
+
+1. Flags Parsing and Configuration Check :
+    - Parse les arguments de ligne de commande pour obtenir le chemin du fichier de configuration.
+    - Vérifie que le fichier de configuration existe et est valide.
+
+2. Application Initialization :
+    - Charge et initialise l'application à partir du fichier de configuration.
+
+3. Brightness and Debug Padding :
+    - Détermine la luminosité de l'image en fonction des paramètres de configuration.
+    - Détermine la largeur du padding pour l'affichage des lignes de scan restantes.
+
+4. PPM Header :
+    - Imprime l'en-tête du fichier PPM (format d'image).
+
+5. Ray Tracing Loop :
+    - Pour chaque pixel de l'image :
+        - Génère plusieurs échantillons pour le pixel en utilisant l'anti-aliasing.
+        - Calcule la couleur moyenne des échantillons.
+        - Ajuste la luminosité de la couleur.
+        - Convertit la couleur en valeurs RGB et les imprime.
+
+6. Scanline Progress :
+    - Affiche les lignes de scan restantes pendant le rendu.
+
+7. Completion Message :
+    - Affiche un message de fin lorsque le rendu est terminé.
+
+## Conclusion
+
+Ce code met en œuvre les bases d'un moteur de rendu par lancer de rayons, en calculant les couleurs des pixels d'une image en fonction des intersections de rayons avec des objets dans une scène 3D. Les différents modules fournissent les fonctionnalités nécessaires pour manipuler les rayons, les vecteurs, les couleurs, et les matériaux des objets.
 ## Material
 # material.rs
 ## Plane_surf
