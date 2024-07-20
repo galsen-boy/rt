@@ -1,4 +1,17 @@
-# camera.rs
+## Table of Contents
+- [Camera.rs](#camera)
+- [Colors.rs](#colors)
+- [Config.rs](#config)
+- [Cube.rs](#cube)
+- [Cylinder.rs](#cylinder)
+- [Flags.rs](#flags)
+    - [Hits.rs](#hits)
+    - [Main.rs](#main)
+    - [Material.rs](#material)
+    - [Plane_surf.rs](#plane_surf)
+    - [Ray.rs](#ray)
+    - [Sphere.rs](#sphere)
+## Camera
 ## Importations et Dépendances
 
 Le code commence par importer plusieurs modules et crates nécessaires :
@@ -184,7 +197,8 @@ let mut rng = rand::thread_rng();
     }
 ```
 En somme, ce code définit une caméra pour un ray tracer avec des méthodes pour initialiser la caméra et générer des rayons à partir de celle-ci. La fonction random_in_unit_disk est utilisée pour créer un flou de profondeur de champ en perturbant légèrement les rayons en fonction de la lentille de la caméra.
-# colors.rs
+## Colors
+## colors.rs
 Ce code définit une nouvelle Color en utilisant le type Vec3 et inclut un ensemble de tests unitaires pour vérifier diverses opérations sur ce type. Voici une explication détaillée de ce code :
 **Définition de ``Color``**
 ```
@@ -307,7 +321,8 @@ Ce test vérifie que la multiplication d'un objet Color par un scalaire fonction
 
 **Conclusion**
 Ces tests couvrent les opérations de base sur les objets Color en vérifiant la création, l'addition, la soustraction, la négation, la multiplication (avec d'autres couleurs et des scalaires) et la division par un scalaire. Ces opérations sont cruciales pour les manipulations de couleurs dans un système de rendu graphique.
-# config.rs
+## Config
+## config.rs
 Ce code montre comment sérialiser et désérialiser des données non traitées représentant des objets géométriques et des caméras dans une application graphique. Chaque type d'objet a une structure "non traitée" qui peut être convertie en une forme traitée utilisée pour le rendu. Voici une explication détaillée du code :
 **Importations**
 ```
@@ -487,6 +502,7 @@ pub struct Application {
 }
 ```
 Application est la structure finale contenant les objets traités (world), la caméra (camera), et les paramètres de rendu (light, samples, height, width).
+## Cube
 # cube.rs
 Ce code montre l'implémentation d'un cube et la manière dont il peut être détecté par un rayon dans un moteur de rendu 3D. Voici une explication détaillée du code :
 ## Importations
@@ -587,6 +603,7 @@ impl Hittable for Cube {
     - Si aucune intersection n'est détectée, None est retourné.
 
 Ce code permet de détecter si un rayon intersecte un cube dans un espace 3D et de retourner les informations nécessaires pour le rendu de l'intersection, comme la position, la normale et le matériau du point d'intersection.
+## Cylinder
 ## cylinder.rs
 Ce code montre l'implémentation d'un cylindre et la manière dont il peut être détecté par un rayon dans un moteur de rendu 3D. Voici une explication détaillée du code :
 ## Importations
@@ -747,6 +764,7 @@ impl Hittable for Cylinder {
     - Sinon, on sélectionne l'intersection la plus proche et retourne le HitRecord correspondant.
 
 Ce code permet de détecter si un rayon intersecte un cylindre dans un espace 3D et de retourner les informations nécessaires pour le rendu de l'intersection, comme la position, la normale et le matériau du point d'intersection.
+## Flags
 # flags.rs
 Ce code présente un outil en ligne de commande qui utilise clap pour analyser les arguments de ligne de commande et ron pour la configuration. Il lit un fichier de configuration, le parse et crée une instance d'application basée sur cette configuration. Voici une explication détaillée :
 ## Imports
@@ -867,12 +885,19 @@ impl Flags {
 ## Conclusion
 
 Ce code constitue la partie de votre programme qui gère l'entrée utilisateur via la ligne de commande pour spécifier un fichier de configuration. Il lit ce fichier, le parse avec ron et crée une instance d'Application basée sur les données de configuration. Les erreurs sont gérées de manière élégante pour fournir des informations utiles en cas de problème.
-# hit.rs
+## Hit
+## hit.rs
+# Main
 # main.rs
+## Material
 # material.rs
+## Plane_surf
 # plane_surf.rs
+## Ray
 # ray.rs
+## Sphere
 # sphere.rs
+## Vec3
 # vec3.rs
 
 
