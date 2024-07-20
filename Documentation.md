@@ -1435,6 +1435,96 @@ fn test_ray_at() {
 Ce code définit une structure Ray pour représenter des rayons en 3D, avec des méthodes pour initialiser des rayons et calculer des points le long de ceux-ci. Les tests unitaires permettent de vérifier la précision de ces méthodes, assurant ainsi que les rayons sont correctement manipulés dans les calculs de rendu ou de tracé de rayons.
 ## Sphere
 # sphere.rs
+Ce code définit une structure ``Sphere`` pour représenter des sphères dans l'espace 3D, ainsi que des méthodes pour créer des sphères et détecter des intersections entre des rayons et ces sphères. Voici une explication détaillée de chaque partie :
+## Importations
+```
+use crate::hit::*;
+use crate::material::Material;
+use crate::ray::Ray;
+use crate::vec3::Vec3;
+```
+Ces lignes importent les modules nécessaires pour la structure ``Sphere``, notamment les modules ``hit``, ``material``, ``ray``, et ``vec3``.
+## Structure ``Sphere``
+```
+#[derive(Debug)]
+pub struct Sphere {
+    center: Vec3,
+    radius: f64,
+    material: Material,
+}
+```
+- ``center`` : Le centre de la sphère.
+- ``radius`` : Le rayon de la sphère.
+- ``material`` : Le matériau de la sphère.
+- L'attribut Debug est dérivé automatiquement pour faciliter l'affichage des instances de Sphere.
+
+## Implémentation de ``Sphere``
+```
+impl Sphere {
+    pub fn new(center: Vec3, radius: f64, material: Material) -> Sphere {
+        Sphere {
+            center,
+            radius,
+            material,
+        }
+    }
+}
+```
+- ``new`` : Constructeur pour créer une nouvelle instance de Sphere avec un centre, un rayon et un matériau donnés.
+
+## Implémentation de Hittable pour ``Sphere``
+
+```
+impl Hittable for Sphere {
+    fn hit(&self, r: &Ray, t_min: f64, t_max: f64) -> Option<HitRecord> {
+        let oc = r.origin - self.center;
+        let a = Vec3::dot(&r.direction, &r.direction);
+        let b = Vec3::dot(&oc, &r.direction);
+        let c = Vec3::dot(&oc, &oc) - self.radius * self.radius;
+
+        let discriminant = b * b - a * c;
+
+        if discriminant > 0.0 {
+            let mut temp = (-b - discriminant.sqrt()) / a;
+            if temp < t_max && temp > t_min {
+                return Some(HitRecord {
+                    t: temp,
+                    point: r.at(temp),
+                    normal: (r.at(temp) - self.center) / self.radius,
+                    u: 0.0,
+                    v: 0.0,
+                    material: self.material,
+                });
+            }
+
+            temp = (-b + discriminant.sqrt()) / a;
+            if temp < t_max && temp > t_min {
+                return Some(HitRecord {
+                    t: temp,
+                    point: r.at(temp),
+                    normal: (r.at(temp) - self.center) / self.radius,
+                    u: 0.0,
+                    v: 0.0,
+                    material: self.material,
+                });
+            }
+        }
+
+        None
+    }
+}
+```
+Cette implémentation permet à une Sphere de détecter si elle est frappée par un rayon et de retourner les informations sur le point d'intersection.
+
+- ``hit`` : Méthode pour détecter les intersections entre un rayon et la sphère.
+    - Calcule les coefficients de l'équation quadratique pour trouver les intersections possibles.
+    - Si le discriminant est positif, il y a deux solutions possibles (intersections) pour l'équation quadratique.
+    - Vérifie si les solutions sont dans l'intervalle [t_min, t_max]. Si oui, elle crée et retourne un HitRecord contenant les informations sur l'intersection.
+    - Si aucune solution n'est trouvée dans l'intervalle, elle retourne None.
+
+## Conclusion
+
+Ce code définit une structure Sphere qui implémente le trait Hittable. Cela permet de créer des sphères et de détecter des intersections entre des rayons et ces sphères, ce qui est crucial pour des applications comme le lancer de rayons ou le rendu 3D.
 ## Vec3
 # vec3.rs
 
