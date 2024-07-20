@@ -12,13 +12,6 @@ pub struct Cylinder {
     
 }
 
-// #[derive(Debug)]
-// pub struct XZCircle {
-//     center: Vec3,
-//     radius: f64,
-//     height: f64,
-//     material: Material
-// }
 
 impl Cylinder {
     pub fn new(center: Vec3, radius: f64, height: f64, material: Material) -> Cylinder {
@@ -31,7 +24,7 @@ impl Cylinder {
     }
 }
 
-// https://www.youtube.com/watch?v=UTz7ytMJ2yk
+
 impl Hittable for Cylinder {
     fn hit(&self, r: &Ray, t_min: f64, t_max: f64) -> Option<HitRecord> {
         // let t = (0.0001 - r.origin.y()) / r.direction.y();

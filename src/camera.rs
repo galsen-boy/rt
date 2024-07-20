@@ -1,12 +1,17 @@
-use crate::ray::Ray;
-use crate::vec3::Vec3;
+use crate::ray::Ray;//Importation de la structure Ray définie dans le module ray
+use crate::vec3::Vec3;//Importation de la structure Vec3 définie dans le module vec3.
+/*Importation de tout le contenu de la pré-configuration de rand,
+ un crate pour la génération de nombres aléatoires.*/
 use rand::prelude::*;
+/*Importation des traits Deserialize et Serialize de serde, 
+un crate pour la sérialisation et la désérialisation.*/
 use serde::{Deserialize, Serialize};
+/*La structure Camera représente une caméra dans un système de rendu graphique. Les champs sont :*/
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Camera {
-    origin: Vec3,
-    lower_left_corner: Vec3,
-    horizontal: Vec3,
+    origin: Vec3,//Le point d'origine de la caméra.
+    lower_left_corner: Vec3,//Le coin inférieur gauche du plan de l'image.
+    horizontal: Vec3,//Le vecteur horizontal du plan de l'image.
     vertical: Vec3,
     lens_radius: f64,
     u: Vec3,
