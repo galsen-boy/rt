@@ -807,6 +807,66 @@ impl Flags {
 ## Conclusion
 Ce code est un composant clé pour une application de rendu 3D en ligne de commande. Il permet de spécifier un fichier de configuration via les arguments de ligne de commande, puis lit et analyse ce fichier pour configurer l'application. En cas d'erreur, il renvoie des erreurs spécifiques pour faciliter le débogage.
 # flag.rs
+Ce code est un exemple de gestion de configuration pour un programme de rendu 3D en Rust. Il utilise les bibliothèques clap pour gérer les arguments de ligne de commande et ron pour le parsing des fichiers de configuration. Voici une explication détaillée :
+## Imports
+```
+use std::path::PathBuf;
+use clap::Parser;
+use crate::config::{Application, Config};
+```
+- ``std::path::PathBuf`` : Utilisé pour stocker et manipuler les chemins de fichiers de manière sécurisée et portable.
+- ``clap::Parser`` : Importé depuis la bibliothèque clap pour définir et analyser les arguments de ligne de commande.
+- ``crate::config::{Application, Config}`` : Importation des structures Application et Config définies dans le module config, utilisées pour gérer la configuration et l'application.
+
+## Structure ``Flags``
+```
+/// Program that renders 3d objects
+#[derive(Parser, Debug)]
+#[command(author, version, about, long_about = None)]
+pub struct Flags {
+    /// Config file to use
+    #[arg(short, long)]
+    pub config: PathBuf,
+}
+```
+- ``Flags`` : Structure pour les arguments de ligne de commande.
+- ``#[derive(Parser, Debug)]`` : Les attributs derive permettent de générer automatiquement des implémentations pour l'analyse des arguments (Parser) et pour le débogage (Debug).
+- ``#[command(author, version, about, long_about = None)] ``: Fournit des métadonnées sur le programme, comme l'auteur et la version.
+    ``pub config``: PathBuf : Définit un argument de ligne de commande ``--config`` (ou ``-c`` pour court) qui spécifie le chemin vers le fichier de configuration.
+
+## Enum ``Error``
+```
+#[derive(Debug)]
+pub enum Error {
+    FailedToReadFile(Box<dyn std::error::Error>),
+    FailedToParse(ron::de::SpannedError),
+}
+```
+- ``Error`` : Enum pour représenter les types d'erreurs pouvant se produire.
+   - ``FailedToReadFile`` : Représente une erreur survenue lors de la lecture du fichier, enveloppée dans un ``Box<dyn std::error::Error>``.
+   - ``FailedToParse`` : Représente une erreur de parsing avec ron, encapsulée dans ``ron::de::SpannedError``.
+
+## Méthode ``get_application``
+```
+impl Flags {
+    pub fn get_application(self) -> Result<Application, Error> {
+        let raw_config = std::fs::read_to_string(self.config)
+            .map_err(|v| Error::FailedToReadFile(Box::new(v)))?;
+
+        Ok(ron::from_str::<Config>(&raw_config)
+            .map_err(Error::FailedToParse)?
+            .process())
+    }
+}
+```
+- ``get_application`` : Méthode pour lire le fichier de configuration, le parser et créer une instance d'Application.
+    - ``std::fs::read_to_string(self.config)`` : Lit le contenu du fichier spécifié dans l'argument config. En cas d'erreur, cette erreur est convertie en ``Error::FailedToReadFile``.
+    - ``ron::from_str::<Config>(&raw_config)`` : Parse le contenu du fichier en une instance de Config en utilisant ron. Les erreurs de parsing sont converties en ``Error::FailedToParse``.
+    - ``Config::process()`` : Transforme la configuration en une instance d'Application.
+
+## Conclusion
+
+Ce code constitue la partie de votre programme qui gère l'entrée utilisateur via la ligne de commande pour spécifier un fichier de configuration. Il lit ce fichier, le parse avec ron et crée une instance d'Application basée sur les données de configuration. Les erreurs sont gérées de manière élégante pour fournir des informations utiles en cas de problème.
 # hit.rs
 # main.rs
 # material.rs
