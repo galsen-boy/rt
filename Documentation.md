@@ -168,7 +168,7 @@ let offset = self.u * rd.x() + self.v * rd.y();
             - offset,
     }
 ```
-**Fonction random_in_unit_disk**
+**Fonction ``random_in_unit_disk``**
 ```
 pub fn random_in_unit_disk() -> Vec3 {
     let mut rng = rand::thread_rng();
@@ -368,7 +368,7 @@ impl UnprocessedData for UnprocessedCube {
 ```
 Cette structure représente un cube non traité. Elle est sérialisable et désérialisable grâce à serde. La méthode process convertit cette structure en un Cube utilisable.
 
-2. UnprocessedPlane
+2. ``UnprocessedPlane``
 ```
 #[derive(Debug, Serialize, Deserialize)]
 pub struct UnprocessedPlane {
@@ -394,7 +394,7 @@ impl UnprocessedData for UnprocessedPlane {
 ```
 Cette structure représente un plan non traité. La méthode process convertit cette structure en un Plane utilisable.
 
-3. UnprocessedSphere
+3. ``UnprocessedSphere``
 ```
 #[derive(Debug, Serialize, Deserialize)]
 pub struct UnprocessedSphere {
@@ -412,7 +412,7 @@ impl UnprocessedData for UnprocessedSphere {
 ```
 Cette structure représente une sphère non traitée. La méthode process convertit cette structure en un Sphere utilisable.
 
-4. UnprocessedCylinder
+4. ``UnprocessedCylinder``
 ```
     #[derive(Debug, Serialize, Deserialize)]
     pub struct UnprocessedCylinder {
@@ -431,7 +431,7 @@ Cette structure représente une sphère non traitée. La méthode process conver
 ```
     Cette structure représente un cylindre non traité. La méthode process convertit cette structure en un Cylinder utilisable.
 
-## UnprocessedCamera
+## ``UnprocessedCamera``
 ```
 #[derive(Debug, Serialize, Deserialize)]
 pub struct UnprocessedCamera {
