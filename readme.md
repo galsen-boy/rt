@@ -183,7 +183,7 @@ make run
 ``
 
 This will create both ``example.ppm`` and ``example.png`` displaying your scene.
-#### Authored by: [Mouhamadou Fadilou Diop](https://learn.zone01dakar.sn/git/mouhamadoufadiop/rt), [Daibou Ba](https://learn.zone01dakar.sn/git/daiba), [Ibrahima Diallo](https://learn.zone01dakar.sn/git/ediallo), [Mamadou Baldé](https://learn.zone01dakar.sn/git/mabalde),[Alimoudine IDRISSOU ](https://learn.zone01dakar.sn/git/ialimoud) and [Ndiaga Ba](https://learn.zone01dakar.sn/git/nihiba)
+#### Authored by: [Mouhamadou Fadilou Diop](https://learn.zone01dakar.sn/git/mouhamadoufadiop/rt), [Daibou Ba](https://learn.zone01dakar.sn/git/daiba), [Ibrahima Diallo](https://learn.zone01dakar.sn/git/ediallo), [Mamadou Baldé](https://learn.zone01dakar.sn/git/mabalde)
 ###### Completed during [grit:lab](https://gritlab.ax/) full-stack development course.
 #### Project Description: [here](https://github.com/01-edu/public/blob/master/subjects/rt/README.md)
 
