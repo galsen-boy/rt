@@ -21,10 +21,10 @@ use crate::vec3::Vec3;
 use rand::prelude::*;
 use serde::{Deserialize, Serialize};
 ```
--``crate::ray::Ray`` : Importation de la structure Ray définie dans le module ray.
--``crate::vec3::Vec3 ``: Importation de la structure Vec3 définie dans le module vec3.
--``rand::prelude::* ``: Importation de tout le contenu de la pré-configuration de rand, un crate pour la génération de nombres aléatoires.
--``serde::{Deserialize, Serialize}`` : Importation des traits Deserialize et Serialize de serde, un crate pour la sérialisation et la désérialisation.
+- ``crate::ray::Ray`` : Importation de la structure Ray définie dans le module ray.
+- ``crate::vec3::Vec3 ``: Importation de la structure Vec3 définie dans le module vec3.
+- ``rand::prelude::* ``: Importation de tout le contenu de la pré-configuration de rand, un crate pour la génération de nombres aléatoires.
+- ``serde::{Deserialize, Serialize}`` : Importation des traits Deserialize et Serialize de serde, un crate pour la sérialisation et la désérialisation.
 
 **Définition de la Structure Camera**
 ```
