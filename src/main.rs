@@ -21,6 +21,8 @@ use rand::prelude::*;
 use ray::Ray;
 use vec3::Vec3;
 
+use indicatif::{ProgressBar, ProgressStyle};
+
 use crate::flags::Flags;
 
 fn color(r: &Ray, world: &HittableList, depth: i32) -> Color {
@@ -60,8 +62,17 @@ fn main() {
 
     println!("P3\n{} {}\n{MAX_RGB_VALUE}", app.width, app.height);
 
+    let bar = ProgressBar::new(app.height as u64);
+    bar.set_style(
+        ProgressStyle::default_bar()
+            .template("{msg} [{bar:40.cyan/red}] {pos}/{len} ({eta})")
+            .expect("Failed to set template")
+            .progress_chars("=>-"),
+    );
+
     for j in (0..app.height).rev() {
-        eprint!("\rScanlines remaining: {j: <debug_pad$}");
+        bar.set_message(format!("Scanlines remaining: {j: <debug_pad$}"));
+        bar.inc(1);
 
         for i in 0..app.width {
             let mut col: Color = (0..app.samples)
@@ -87,5 +98,6 @@ fn main() {
         }
     }
 
+    bar.finish_with_message("Done!");
     eprintln!("\nDone!");
 }

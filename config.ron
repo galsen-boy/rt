@@ -4,6 +4,7 @@ Config(
     width: 800,
     height: 600,
     world: [
+       
         {
             "Cube": (
                 p0: Vec3(-0.5, 0.0, -1.0),
