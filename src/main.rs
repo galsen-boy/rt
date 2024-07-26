@@ -72,27 +72,30 @@ fn main() {
         "\x1b[32m", // Green
     ];
 
+    // Patterns for progress bar
+    let patterns = ["=>-", "•·•", "#*-", "▒▓█"];
+
     for j in (0..app.height).rev() {
         // Calculate progress
         let progress = j as f64 / app.height as f64;
 
         // Determine color based on progress
-        let progress_color = if progress > 0.75 {
-            colors[0] //Red 
+        let (progress_color, pattern) = if progress > 0.75 {
+            (colors[0], patterns[0]) // Red and pattern 1
         } else if progress > 0.5 {
-            colors[1] // Magenta
+            (colors[1], patterns[1]) // Magenta and pattern 2
         } else if progress > 0.25 {
-            colors[2] // Yellow
+            (colors[2], patterns[2]) // Yellow and pattern 3
         } else {
-            colors[0] //Green
+            (colors[3], patterns[3]) // Green and pattern 4
         };
 
-        // Update the progress bar style with the new color
+        // Update the progress bar style with the new color and pattern
         bar.set_style(
             ProgressStyle::default_bar()
                 .template(&format!("{{msg}} [{progress_color}{{bar:40}}]{{bar_reset}} {{pos}}/{{len}} ({{eta}})"))
                 .expect("Failed to set template")
-                .progress_chars("=>-"),
+                .progress_chars(pattern),
         );
 
         bar.set_message(format!("Scanlines remaining: {j: <debug_pad$}"));
