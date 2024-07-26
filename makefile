@@ -7,7 +7,8 @@ bench: build
 run: build
 	cargo +nightly run --release -- -c config.ron > example.ppm
 	ffmpeg -y -i example.ppm example.png
+	python3 zoom_and_reset.py
 clean:
 	cargo clean
-	rm example.ppm example.png
+	rm example.ppm example.png example_zoomed.png example_reset.png
 
