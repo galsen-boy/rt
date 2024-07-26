@@ -63,14 +63,38 @@ fn main() {
     println!("P3\n{} {}\n{MAX_RGB_VALUE}", app.width, app.height);
 
     let bar = ProgressBar::new(app.height as u64);
-    bar.set_style(
-        ProgressStyle::default_bar()
-            .template("{msg} [{bar:40.cyan/red}] {pos}/{len} ({eta})")
-            .expect("Failed to set template")
-            .progress_chars("=>-"),
-    );
+
+    // ANSI color codes for red, magenta, yellow, and green
+    let colors = [
+        "\x1b[31m", // Red
+        "\x1b[35m", // Magenta
+        "\x1b[33m", // Yellow
+        "\x1b[32m", // Green
+    ];
 
     for j in (0..app.height).rev() {
+        // Calculate progress
+        let progress = j as f64 / app.height as f64;
+
+        // Determine color based on progress
+        let progress_color = if progress > 0.75 {
+            colors[0] //Red 
+        } else if progress > 0.5 {
+            colors[1] // Magenta
+        } else if progress > 0.25 {
+            colors[2] // Yellow
+        } else {
+            colors[0] //Green
+        };
+
+        // Update the progress bar style with the new color
+        bar.set_style(
+            ProgressStyle::default_bar()
+                .template(&format!("{{msg}} [{progress_color}{{bar:40}}]{{bar_reset}} {{pos}}/{{len}} ({{eta}})"))
+                .expect("Failed to set template")
+                .progress_chars("=>-"),
+        );
+
         bar.set_message(format!("Scanlines remaining: {j: <debug_pad$}"));
         bar.inc(1);
 
