@@ -9,6 +9,7 @@ Config(
             "Cube": (
                 p0: Vec3(-0.5, 0.0, -1.0),
                 p1: Vec3(0.5, 1.0, 0.0),
+                //Metal,Dielectric or
                 mat: Lambertian(
                     albedo: Vec3(0.0, 1.0, 0.1),
                 )
@@ -24,7 +25,7 @@ Config(
                 )
             )
         },
-        {
+       {
             "Cylinder": (
                 center: Vec3(0.5, 0.5, 0.5),
                 radius: 0.25,
