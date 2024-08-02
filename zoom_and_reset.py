@@ -1,4 +1,5 @@
 from PIL import Image
+import os
 
 def zoom_image(image_path, output_path, zoom_factor):
     """
@@ -33,6 +34,18 @@ def reset_image(image_path, output_path):
     with Image.open(image_path) as img:
         img.save(output_path)
 
+def delete_image(image_path):
+    """
+    Deletes the specified image file.
+    
+    :param image_path: Path to the image file to be deleted.
+    """
+    if os.path.exists(image_path):
+        os.remove(image_path)
+        print(f"Deleted image: {image_path}")
+    else:
+        print(f"Image not found: {image_path}")
+
 def main():
     # Paths
     original_image_path = 'example.png'
@@ -49,6 +62,9 @@ def main():
     # Reset image
     reset_image(original_image_path, reset_image_path)
     print(f"Reset image saved to {reset_image_path}")
+    
+    # Delete the zoomed image (example usage)
+    delete_image(zoomed_image_path)
 
 if __name__ == "__main__":
     main()
