@@ -1,130 +1,33 @@
-#![feature(let_chains)]
-
-pub mod camera;
-pub mod color;
-pub mod config;
-pub mod cube;
-pub mod flags;
-pub mod hit;
-pub mod material;
-pub mod plane_surf;
-mod cylinder;
-pub mod ray;
-pub mod sphere;
-pub mod vec3;
-
-use clap::Parser;
-use color::Color;
-use hit::{Hittable, HittableList};
-use material::scatter;
-use rand::prelude::*;
-use ray::Ray;
-use vec3::Vec3;
-
-use indicatif::{ProgressBar, ProgressStyle};
-
-use crate::flags::Flags;
-
-fn color(r: &Ray, world: &HittableList, depth: i32) -> Color {
-    if let Some(rec) = world.hit(r, 0.0, std::f64::MAX) {
-        if depth < 50 && let Some((attenuation, scattered)) = scatter(&rec.material, r, &rec) {
-            attenuation * color(&scattered, world, depth + 1)
-        } else {
-            Color::new(0.0, 0.0, 0.0)
-        }
-    } else {
-        let unit_direction = Vec3::unit_vector(&r.direction);
-        let t = 0.5 * (unit_direction.y() + 1.0);
-
-        Color::new(1.0, 1.0, 1.0) * (1.0 - t) + Color::new(0.5, 0.7, 1.0) * t
-    }
-}
-
-const MAX_RGB_VALUE: u8 = 255; // Max value in RGB colours (0...255)
+use rt::gui::launch_gui;
+use rt::raytracer::{CameraBuilder, Scene};
+use rt::type_aliases::Point;
+use std::env;
+use std::sync::Arc;
+use std::time::Instant;
+const OUTPUT_PATH: &str = "output.ppm";
 
 fn main() {
-    let flags = Flags::parse();
-    if !flags.config.exists() || !flags.config.is_file() {
-        eprintln!("Please choose a valid file");
-        return;
-    }
+    let args: Vec<String> = env::args().collect();
+    if args.contains(&"no-gui".to_string()) {
+        let mut camera = CameraBuilder::new()
+            .sample_size(100)
+            .position_by_coordinates(Point::new(-6.0, 6.0, 15.0))
+            .look_at(Point::new(0.0, 0.0, 0.0))
+            .focal_length(2.0)
+            .resolution(800, 600)
+            .build();
 
-    let app = flags.get_application().expect("Failed to parse config");
+        let scene = Arc::new(Scene::init(0.5));
 
-    let mut rng = rand::thread_rng();
-    let brightness = if app.light > 0 && app.light <= 100 {
-        app.light as f64 / 100.0
+        let start = Instant::now();
+
+        // Perform ray tracing
+        camera.send_rays(scene.clone());
+        camera.write_to_ppm(OUTPUT_PATH);
+
+        let duration = start.elapsed();
+        println!("Time taken for rendering: {:?}", duration);
     } else {
-        1.0
-    };
-
-    let debug_pad = app.height.to_string().len();
-
-    println!("P3\n{} {}\n{MAX_RGB_VALUE}", app.width, app.height);
-
-    let bar = ProgressBar::new(app.height as u64);
-
-    // ANSI color codes for red, magenta, yellow, and green
-    let colors = [
-        "\x1b[31m", // Red
-        "\x1b[35m", // Magenta
-        "\x1b[33m", // Yellow
-        "\x1b[32m", // Green
-    ];
-
-    // Patterns for progress bar
-    let patterns = ["=>-", "•·•", "#*-", "▒▓█"];
-
-    for j in (0..app.height).rev() {
-        // Calculate progress
-        let progress = j as f64 / app.height as f64;
-
-        // Determine color based on progress
-        let (progress_color, pattern) = if progress > 0.75 {
-            (colors[0], patterns[0]) // Red and pattern 1
-        } else if progress > 0.5 {
-            (colors[1], patterns[1]) // Magenta and pattern 2
-        } else if progress > 0.25 {
-            (colors[2], patterns[2]) // Yellow and pattern 3
-        } else {
-            (colors[3], patterns[3]) // Green and pattern 4
-        };
-
-        // Update the progress bar style with the new color and pattern
-        bar.set_style(
-            ProgressStyle::default_bar()
-                .template(&format!("{{msg}} [{progress_color}{{bar:40}}]{{bar_reset}} {{pos}}/{{len}} ({{eta}})"))
-                .expect("Failed to set template")
-                .progress_chars(pattern),
-        );
-
-        bar.set_message(format!("Scanlines remaining: {j: <debug_pad$}"));
-        bar.inc(1);
-
-        for i in 0..app.width {
-            let mut col: Color = (0..app.samples)
-                .map(|_| {
-                    let u = (i as f64 + rng.gen::<f64>()) / app.width as f64;
-                    let v = (j as f64 + rng.gen::<f64>()) / app.height as f64;
-                    let r = &app.camera.get_ray(u, v);
-
-                    color(r, &app.world, 1)
-                })
-                .sum();
-
-            col /= app.samples as f64;
-            col = brightness * col;
-
-            let adjust = |f: f64| (255.99 * f) as i32;
-
-            let ir = adjust(col.r());
-            let ig = adjust(col.g());
-            let ib = adjust(col.b());
-
-            println!("{ir} {ig} {ib}");
-        }
+        launch_gui();
     }
-
-    bar.finish_with_message("Done!");
-    eprintln!("\nDone!");
 }
