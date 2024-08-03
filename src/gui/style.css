@@ -1,5 +1,8 @@
 /* Main window */
 window {
+    background-image: url("/home/mouhamadou/rt/audit_images/bg.jpg"); 
+    background-repeat: no-repeat; /* Empêche la répétition de l'image */
+    background-size: cover; /* Couvre toute la fenêtre */
     background-color: rgb(201, 201, 212); /* Creamy color */
     color: #333; /* Dark text for contrast */
     border: 1px solid #ccc;
