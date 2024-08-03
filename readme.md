@@ -188,3 +188,63 @@ This will create both ``example.ppm`` and ``example.png`` displaying your scene.
 #### Project Description: [here](https://github.com/01-edu/public/blob/master/subjects/rt/README.md)
 
 ![closeup](https://github.com/bomanviktor/rt/assets/72476579/115a7a5e-e942-46e9-a75f-2246820571cf)
+
+
+
+
+```
+Config(
+    light: 100,
+    samples: 100,
+    width: 800,
+    height: 600,
+    world: [
+        {
+            "Cube": (
+                p0: Vec3(-0.5, 0.0, -1.0),
+                p1: Vec3(0.5, 1.0, 0.0),
+                mat: Lambertian(
+                    albedo: Vec3(0.0, 1.0, 0.1),
+                )
+            )
+        },
+        {
+            "Sphere": (
+                center: Vec3(2.0, 0.0, -1.0),
+                radius: 0.5,
+                material: Lambertian(
+                    albedo: Vec3(0.2, 0.2, 1.0),
+                )
+            )
+        },
+        {
+            "Cylinder": (
+                center: Vec3(0.5, 0.5, 0.5),
+                radius: 0.25,
+                height: 0.5,
+                material: Lambertian(
+                    albedo: Vec3(1.0, 0.1, 0.1),
+                )
+            )
+        },
+        {
+            "Plane": (
+                normal: Vec3(0.0, 2.0, -1.0),
+                dist: 0.0,
+                width: 4.0,
+                height: 5.0,
+                material: Lambertian (
+                    albedo: Vec3(0.9, 0.8, 0.6),
+                ),
+            )
+        }
+    ],
+    camera: (
+        look_from: Vec3(1.0, 3.0, 4.0),
+        look_at: Vec3(0.0, 0.0, -1.0),
+        vup: Vec3(0.0, 1.0, 0.0),
+        vfov: 45.0,
+        aperture: 0.1,
+    )
+)
+```
