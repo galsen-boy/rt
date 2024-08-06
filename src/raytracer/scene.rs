@@ -17,7 +17,8 @@ impl Scene {
             10.0,
             Diffusive(RGB::light_blue()),
         );
-        let light = Cylinder::new(Point::default(), 1.0, 2.0, Diffusive(RGB::orange()));
+        //
+        let light = Cylinder::new(Point::default(), 1.0, 2.0, Diffusive(RGB::blue()));
         let sphere = Sphere::new(Point::new(3.0, 1.0, 0.0), 1.0, Diffusive(RGB::mint_green()));
         let cube = Cube::new(Point::new(-3.0, 0.5, 0.0), 1.0, Diffusive(RGB::coral()));
 
