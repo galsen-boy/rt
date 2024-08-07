@@ -1,123 +1,31 @@
-use crate::type_aliases::Directions;
-use crate::{config::rays::*, textures::Texture, type_aliases::Color};
+use super::vec3::Vec3;
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct Ray {
-    pub origin: Point,
-    pub direction: Direction,
-    pub collisions: Vec<Color>,
-    pub hit_light_source: bool,
-    pub intersection_dist: f64,
-    pub depth: u8,
+    origin: Vec3,
+    direction: Vec3,
 }
 
 impl Ray {
-    pub fn new(origin: Point, direction: Point, depth: u8) -> Self {
-        Self {
+    pub fn new(origin: Vec3, direction: Vec3) -> Ray {
+        let mut dir = direction;
+        dir.normalize();
+
+        Ray {
             origin,
-            direction: direction.normalize(),
-            collisions: Vec::new(),
-            hit_light_source: false,
-            intersection_dist: f64::MAX,
-            depth,
+            direction: dir,
         }
     }
 
-    /// Find the closest intersection, create a new ray based on the surface, and recursively call
-    /// `trace`
-    pub fn trace(&mut self, scene: &Scene) {
-        if self.reached_max_depth() {
-            return;
-        }
-
-        // Process the closest intersection
-        if let Some(intersection) = self.closest_intersection(scene) {
-            let small_offset = 1e-3 * intersection.normal;
-            let origin = intersection.hit_point + small_offset;
-            let normal = intersection.normal;
-
-            // Reflect based on object texture
-            match intersection.texture {
-                Texture::Diffusive(color) => {
-                    self.collisions.push(color);
-                    let direction = self.diffuse_direction(normal);
-                    if direction.near_zero() {
-                        self.reflect(origin, normal, scene);
-                    } else {
-                        self.reflect(origin, direction, scene);
-                    }
-                }
-                Texture::Reflective => {
-                    let direction = self.perfect_reflection(normal);
-                    self.reflect(origin, direction, scene);
-                }
-
-                Texture::Light(color) => {
-                    self.collisions.push(color);
-                    self.hit_light_source = true;
-                }
-            }
-        }
+    pub fn get_direction(&self) -> &Vec3 {
+        &self.direction
     }
 
-    fn closest_intersection(&mut self, scene: &Scene) -> Option<Intersection> {
-        let mut closest_intersection: Option<Intersection> = None;
-        for object in &scene.objects {
-            if let Some(intersection) = object.intersection(self) {
-                if intersection.distance < self.intersection_dist {
-                    self.intersection_dist = intersection.distance;
-                    closest_intersection = Some(intersection);
-                }
-            }
-        }
-        closest_intersection
+    pub fn get_origin(&self) -> &Vec3 {
+        &self.origin
     }
 
-    /// ### diffuse_direction
-    ///
-    /// Generate a random direction for diffuse reflection on a hemisphere given a surface normal
-    fn diffuse_direction(&self, normal: Normal) -> Direction {
-        let mut rng = rand::thread_rng();
-
-        // Create a local coordinate system around the normal
-        let incident_ray = normal.normalize();
-        let tangent_a = if incident_ray.x.abs() > 0.9 {
-            Vector3::new(0.0, -1.0, 0.0)
-        } else {
-            Vector3::new(-1.0, 0.0, 0.0)
-        };
-        let tangent_v = incident_ray.cross(&tangent_a).normalize();
-        let tangent_u = incident_ray.cross(&tangent_v);
-
-        // Generate random points on a hemisphere
-        let rand_1: f64 = rng.gen();
-        let rand_2: f64 = rng.gen();
-        let sin_theta = (1.0 - rand_2 * rand_2).sqrt();
-        let phi = 2.0 * std::f64::consts::PI * rand_1;
-        let local_x = phi.cos() * sin_theta;
-        let local_y = phi.sin() * sin_theta;
-        let local_z = rand_2.sqrt();
-
-        // Convert to world coordinates
-        tangent_u * local_x + tangent_v * local_y + incident_ray * local_z
-    }
-
-    fn perfect_reflection(&self, normal: Normal) -> Direction {
-        self.direction - 2.0 * self.direction.dot(&normal) * normal
-    }
-    pub fn reflect(&mut self, origin: Point, direction: Direction, scene: &Scene) {
-        let mut secondary_ray = Ray::new(origin, direction, self.depth + 1);
-
-        secondary_ray.trace(scene);
-
-        self.collisions.extend(secondary_ray.collisions);
-
-        if secondary_ray.hit_light_source {
-            self.hit_light_source = true;
-        }
-    }
-
-    fn reached_max_depth(&self) -> bool {
-        self.depth >= MAX_DEPTH
+    pub fn point_at(&self, t: f32) -> Vec3 {
+        self.origin + t * self.direction
     }
 }

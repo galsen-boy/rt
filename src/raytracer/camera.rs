@@ -1,206 +1,61 @@
-use crate::config::camera::*;
-use crate::type_aliases::{Color, Direction};
+use super::ray::Ray;
+use super::vec3::Vec3;
+use rand::Rng;
 
-#[derive(Debug)]
 pub struct Camera {
-    pub sample_size: u16,
-    pub position: Vector3<f64>,
-    pub look_at: Vector3<f64>,
-    pub up_direction: Vector3<f64>,
-    pub resolution: Resolution,
-    pub aspect_ratio: f64,
-    pub focal_length: f64,
-    pub sensor_width: f64,
-    pub pixels: Pixels,
+    left_corner: Vec3,
+    lens_radius: f32,
+    horizontal: Vec3,
+    position: Vec3,
+    vertical: Vec3,
 }
 
 impl Camera {
-    pub fn send_rays(&mut self, scene: Arc<Scene>) {
-        let (width, height) = self.resolution;
-        let total_pixels = (width * height) as usize;
+    pub fn new(
+        position: Vec3,
+        lookat: Vec3,
+        up: Vec3,
+        aspect: f32,
+        fovy: f32,
+        aperture: f32,
+        focus_dist: f32,
+    ) -> Camera {
+        let lens_radius = aperture / 2.0;
+        let half_theta = fovy.to_radians() / 2.0;
+        let half_height = half_theta.tan();
+        let half_width = half_height * aspect;
 
-        // Pre-allocate a vector with default Color values
-        let mut colors = vec![Vector3::default(); total_pixels];
+        let mut w = position - lookat;
+        w.normalize();
+        let mut u = Vec3::cross_product(&up, &w);
+        u.normalize();
+        let v = Vec3::cross_product(&w, &u);
 
-        // Parallelize the computation for each pixel
-        colors
-            .par_iter_mut()
-            .enumerate()
-            .for_each(|(pixel, pixel_color)| {
-                let column = pixel as u32 % width;
-                let row = (total_pixels - pixel) as u32 / width;
-                let mut total_color = Color::black();
-
-                for _sample in 0..self.sample_size {
-                    let direction = self.ray_direction(column, row);
-                    let mut ray = Ray::new(self.position, direction, 0);
-
-                    ray.trace(&scene); // Recursive ray tracing with default 50 depth.
-
-                    if ray.collisions.is_empty() {
-                        total_color += scene.background(); // No collision, add background color.
-                        continue;
-                    }
-
-                    if ray.hit_light_source {
-                        total_color += ray.average_color(&scene);
-                    } else {
-                        total_color += ray.average_color(&scene) * scene.brightness
-                    }
-                }
-
-                // Set the current pixel to the average color of the samples.
-                *pixel_color = total_color / self.sample_size as f64;
-            });
-
-        // Update the camera's pixels
-        self.pixels = colors;
-    }
-
-    pub fn write_to_ppm(&self, path: &str) {
-        let (w, h) = self.resolution;
-        let mut file = std::fs::File::create(path).unwrap();
-        writeln!(file, "P3").unwrap();
-        writeln!(file, "{w} {h}").unwrap();
-        writeln!(file, "255").unwrap();
-        let pixel_data: Vec<String> = self
-            .pixels
-            .par_iter()
-            .chunks(w as usize)
-            .map(|row| {
-                row.iter()
-                    .map(|pixel| {
-                        let corrected = pixel.correct_gamma(2.0);
-                        format!("{} {} {}", corrected.r(), corrected.g(), corrected.b())
-                    })
-                    .collect::<Vec<String>>()
-                    .join(" ")
-            })
-            .collect();
-
-        // Write the prepared pixel data to the file
-        for row in pixel_data {
-            writeln!(file, "{}", row).unwrap();
-        }
-    }
-
-    fn ray_direction(&self, pixel_x: u32, pixel_y: u32) -> Vector3<f64> {
-        // Calculate the camera basis vectors
-        let view_direction = (self.position - self.look_at).normalize();
-        let right_vector = self.up_direction.cross(&view_direction).normalize();
-        let up_vector = view_direction.cross(&right_vector);
-        let (width, height) = self.resolution;
-        let mut rand = rand::thread_rng();
-
-        // Convert pixel coordinates to normalized world coordinates
-        let normalized_x = (pixel_x as f64 + rand.gen_range(0.0..1.0)) / (width as f64) - 0.5;
-        let normalized_y = (pixel_y as f64 + rand.gen_range(0.0..1.0)) / (height as f64) - 0.5;
-
-        // Compute the ray direction
-        right_vector * (normalized_x * self.aspect_ratio) + up_vector * normalized_y
-            - view_direction * self.focal_length
-    }
-}
-
-#[derive(Default)]
-pub struct CameraBuilder {
-    pub sample_size: Option<u16>,
-    pub position: Option<Vector3<f64>>,
-    pub look_at: Option<Vector3<f64>>,
-    pub up_direction: Option<Vector3<f64>>,
-    pub resolution: Option<Resolution>,
-    pub focal_length: Option<f64>,
-    pub sensor_width: Option<f64>,
-}
-
-impl CameraBuilder {
-    pub fn new() -> Self {
-        Self {
-            sample_size: None,
-            position: None,
-            look_at: None,
-            up_direction: None,
-            resolution: None,
-            focal_length: None,
-            sensor_width: None,
-        }
-    }
-
-    pub fn build(&self) -> Camera {
-        let (width, height) = self.resolution.unwrap_or(DEFAULT_RESOLUTION);
+        let left_corner =
+            position - half_width * focus_dist * u - half_height * focus_dist * v - focus_dist * w;
+        let horizontal = 2.0 * half_width * focus_dist * u;
+        let vertical = 2.0 * half_height * focus_dist * v;
 
         Camera {
-            sample_size: self.sample_size.unwrap_or(DEFAULT_SAMPLE_SIZE),
-            position: self.position.unwrap_or(DEFAULT_CAMERA_POSITION),
-            look_at: self.look_at.unwrap_or_default(), // 0,0,0 is the default
-            up_direction: self.adjusted_up_direction(),
-            resolution: self.resolution.unwrap_or(DEFAULT_RESOLUTION),
-            aspect_ratio: width as f64 / height as f64,
-            focal_length: self.focal_length.unwrap_or(DEFAULT_FOCAL_LENGTH),
-            sensor_width: self.sensor_width.unwrap_or(DEFAULT_SENSOR_WIDTH),
-            pixels: Vec::new(),
+            left_corner,
+            lens_radius,
+            horizontal,
+            position,
+            vertical,
         }
     }
 
-    fn adjusted_up_direction(&self) -> Direction {
-        let mut camera_position = self.position.unwrap_or(DEFAULT_CAMERA_POSITION);
+    pub fn get_ray(&self, rng: &mut rand::XorShiftRng, x: f32, y: f32) -> Ray {
+        let origin = self.position;
+        let offset = Vec3::new(
+            self.lens_radius * (rng.next_f32() * 2.0 - 1.0),
+            self.lens_radius * (rng.next_f32() * 2.0 - 1.0),
+            0.0,
+        );
 
-        if camera_position.x == 0.0 && camera_position.z == 0.0 {
-            camera_position.z = 0.1;
-        }
-
-        let look_at_position = self.look_at.unwrap_or_default();
-
-        // Step 1: Compute Look Direction
-        let look_direction = look_at_position - camera_position;
-
-        // Step 2: Normalize the Look Direction
-        let normalized_look_direction = look_direction.normalize();
-
-        // Step 3: Define Up Direction (Positive Y)
-        let up_direction = -Vector3::y().normalize();
-
-        // Step 4: Compute Right Direction
-        let right_direction = normalized_look_direction.cross(&up_direction);
-
-        // Step 5: Normalize the Right Direction
-        let normalized_right_direction = right_direction.normalize();
-
-        // Step 6: Compute Final Up Direction
-        normalized_look_direction.cross(&normalized_right_direction)
-    }
-
-    pub fn sample_size(&mut self, sample_size: u16) -> &mut Self {
-        self.sample_size = Some(sample_size);
-        self
-    }
-
-    pub fn position_by_coordinates(&mut self, position: Point) -> &mut Self {
-        self.position = Some(position);
-        self
-    }
-
-    pub fn look_at(&mut self, coordinate: Point) -> &mut Self {
-        self.look_at = Some(coordinate);
-        self
-    }
-    pub fn up_direction_by_coordinates(&mut self, up_direction: Point) -> &mut Self {
-        self.up_direction = Some(up_direction);
-        self
-    }
-
-    pub fn resolution(&mut self, w: u32, h: u32) -> &mut Self {
-        self.resolution = Some((w, h) as Resolution);
-        self
-    }
-
-    pub fn focal_length(&mut self, focal_length: f64) -> &mut Self {
-        self.focal_length = Some(focal_length);
-        self
-    }
-
-    pub fn sensor_width(&mut self, sensor_width: f64) -> &mut Self {
-        self.sensor_width = Some(sensor_width);
-        self
+        Ray::new(
+            origin + offset,
+            self.left_corner + self.horizontal * x + self.vertical * y - origin - offset,
+        )
     }
 }
